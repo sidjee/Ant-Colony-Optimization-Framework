@@ -5,28 +5,55 @@ public class ACOImplement{
 	protected double alpha;
 	protected double beta;
 	protected double rho;
-
+	protected int m;
 
 	protected void implement(taskList,vmList,tmax){
 		int tasks = taskList.size();
 		int vms = vmList.size();
+		List<int> newVmList = new ArrayList<>();
+		newVmList.addAll(Range.range(vms));
 		// Map<char,int> []edges = new HashMap<char,int>()[tasks];
 		Map<int,int> []tabu = new HashMap<>()[vms];
+		List<int> lengths = new ArrayList<>();
+		
+		Map<int, Map<int,double> > execTimes;
+		execTimes = new Hashmap<>();
 
+		for(int i=0;i<tasks;i++){
+			Map<int,double> x = new Hashmap<>();
+			for (int j=0; j<vms ; j++) {
+				double t = getExecutionTime(vmList[j],taskList[i]);
+				x.put(j,t);
+			}
+			execTimes.put(i,x);
+		}
+		
 		initializePheromone(tasks,vms);
 
 		for(int t=1;t<=tmax;t++){
-			for(int k=0;k<vms;k++){
-				tabu[k].put(-1,vmList[k].getID());
+			Collections.shuffle(newVmList);
+			for(int k=0;k<m;k++){
+				tabu[k].put(-1,newVmList[k]);
+				double max = 0;
 				for(int task=0;task<tasks;task++){
-					int vmIDchosen = chooseVM(taskList[task].getID,vmList,tabu[k]);
-					tabu[k].put(task,vmIDchosen);
+					int vmIndexChosen = chooseVM(taskList[task],vmList,tabu[k],execTimes);
+					tabu[k].put(task,vmIndexChosen);
+					double time = execTimes.get(task).get(vmIndexChosen);
+					max = (max<time)?time:max;
 				}
+				lengths[k]+=max;
 			}
+			double min = lengths[0];
+			int kmin = 0;
+			for(int k=1;k<m;k++){
+				min = (min>lengths[k])?lengths[k]:min;
+				kmin = (min>lengths[k])?k:kmin;
+			}
+			
 		}
 	}
 
-	public ACOImplement(int initialPheromone,int Q,int alpha, int beta, int rho){
+	public ACOImplement(int m, int initialPheromone, int Q, int alpha, int beta, int rho){
 		this.initialPheromone = initialPheromone;
 		this.Q = Q;
 		this.alpha = alpha;
@@ -44,6 +71,7 @@ public class ACOImplement{
 			pheromones.put(i,x);
 		}
 	}
+
 	protected double getExecutionTime(Vm VM, Cloudlet cloudlet){
 		return (cloudlet.getCloudletLength()/(VM.getPes()*VM.getMips()) + cloudlet.getCloudletFileSize()/VM.getBW());
 	}
