@@ -29,7 +29,6 @@ import org.cloudbus.cloudsim.provisioners.RamProvisionerSimple;
 
 public class ACOImplement{
 	protected double initialPheromone;
-	protected Map<Integer, Map<Integer,Double> > pheromones;
 	protected double Q;
 	protected double alpha;
 	protected double beta;
