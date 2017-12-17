@@ -36,7 +36,18 @@ public class ACOImplement{
 	protected double rho;
 	protected int m;
 
-	public Map<Integer,Integer> implement(List<Cloudlet> taskList,List<Vm> vmList,int tmax){
+	public Map<Integer,Integer> allocateTasks(List<Cloudlet> taskList,List<Vm> vmList,int tmax){
+		int n = vmList.size();
+		Map<Integer,Integer> allocatedtasks = new HashMap<>();
+		if(taskList.size()>n){
+			for(int i=0;i<(int)taskList.size()/n;i++){
+				allocatedtasks.putAll(implement(taskList.subList(i*n,(i+1)*n),vmList,tmax));
+			}
+		}
+		return allocatedtasks;
+	}
+
+	protected Map<Integer,Integer> implement(List<Cloudlet> taskList,List<Vm> vmList,int tmax){
 		int tasks = taskList.size();
 		int vms = vmList.size();
 		List<Integer> newVmList = IntStream.range(0,vms).boxed().collect(Collectors.toList());
