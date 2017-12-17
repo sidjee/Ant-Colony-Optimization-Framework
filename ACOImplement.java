@@ -1,8 +1,11 @@
+
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.*;
+import java.lang.*;
+// import java.util.Calendar;
+// import java.util.LinkedList;
+// import java.util.List;
 
 import org.cloudbus.cloudsim.Cloudlet;
 import org.cloudbus.cloudsim.CloudletSchedulerTimeShared;
@@ -26,64 +29,64 @@ import org.cloudbus.cloudsim.provisioners.RamProvisionerSimple;
 
 public class ACOImplement{
 	protected double initialPheromone;
-	protected Map<int, Map<int,double> > pheromones;
+	protected Map<Integer, Map<Integer,Double> > pheromones;
 	protected double Q;
 	protected double alpha;
 	protected double beta;
 	protected double rho;
 	protected int m;
 
-	protected void implement(taskList,vmList,tmax){
+	public Map<Integer,Integer> implement(List<Cloudlet> taskList,List<Vm> vmList,int tmax){
 		int tasks = taskList.size();
 		int vms = vmList.size();
-		List<int> newVmList = new ArrayList<>();
-		newVmList.addAll(Range.range(vms));
+		List<Integer> newVmList = IntStream.range(0,vms).boxed().collect(Collectors.toList());
 		// Map<char,int> []edges = new HashMap<char,int>()[tasks];
-		List<double> lengths = new ArrayList<>();
-		Map<int,int> []tabu;
-		Map<int, Map<int,double> > execTimes;
-		execTimes = new Hashmap<>();
+		List<Double> lengths = new ArrayList<>();
+		List<Map<Integer,Integer>> tabu = new ArrayList<>();
+		Map<Integer, Map<Integer,Double> > execTimes;
+		execTimes = new HashMap<>();
 
 		for(int i=0;i<tasks;i++){
-			Map<int,double> x = new Hashmap<>();
+			Map<Integer,Double> x = new HashMap<>();
 			for (int j=0; j<vms ; j++) {
-				double t = getExecutionTime(vmList[j],taskList[i]);
+				double t = getExecutionTime(vmList.get(j),taskList.get(i));
 				x.put(j,t);
 			}
 			execTimes.put(i,x);
 		}
 		
-		Map<int, Map<int,double> > pheromones = initializePheromone(tasks,vms);
+		Map<Integer, Map<Integer,Double> > pheromones = initializePheromone(tasks,vms);
 
 		for(int t=1;t<=tmax;t++){
-			tabu = new HashMap<>()[vms];
+			tabu = new ArrayList<>();
 
 			Collections.shuffle(newVmList);
 
 			for(int k=0;k<m;k++){
-				tabu[k].put(-1,newVmList[k]);
+				tabu.add(k,new HashMap<Integer,Integer>());
+				tabu.get(k).put(-1,newVmList.get(k));
 				double max = 0;
 
 				for(int task=0;task<tasks;task++){
-					int vmIndexChosen = chooseVM(taskList[task],vmList,tabu[k],execTimes,pheromones);
-					tabu[k].put(task,vmIndexChosen);
+					int vmIndexChosen = chooseVM(taskList.get(task),vmList,tabu.get(k),execTimes,pheromones);
+					tabu.get(k).put(task,vmIndexChosen);
 					double time = execTimes.get(task).get(vmIndexChosen);
 					max = (max<time)?time:max;
 				}
 
-				lengths[k]=max;
+				lengths.get(k)=max;
 			}
 
-			double min = lengths[0];
+			double min = lengths.get(0);
 			int kmin = 0;
 
 			for(int k=1;k<m;k++){
-				min = (min>lengths[k])?lengths[k]:min;
-				kmin = (min>lengths[k])?k:kmin;
+				min = (min>lengths.get(k))?lengths.get(k):min;
+				kmin = (min>lengths.get(k))?k:kmin;
 			}
 
 			updatePheromones(pheromones,lengths,tabu);
-			globalUpdatePheromones(pheromones,min,tabu[kmin]);
+			globalUpdatePheromones(pheromones,min,tabu.get(kmin));
 		}
 	}
 
@@ -95,10 +98,10 @@ public class ACOImplement{
 		this.rho = rho;
 	}
 
-	protected Map<int, Map<int,double> > initializePheromone(int tasks, int vms){
+	protected Map<Integer, Map<Integer,Double> > initializePheromone(int tasks, int vms){
 		pheromones = new HashMap<>();
 		for(int i=0;i<tasks;i++){
-			Map<int,double> x = new Hashmap<>();
+			Map<Integer,Double> x = new HashMap<>();
 			for (int j=0; j<vms ; j++) {
 				x.put(j,initialPheromone);
 			}
@@ -107,17 +110,17 @@ public class ACOImplement{
 		return pheromones;
 	}
 
-	protected updatePheromones(Map<int, Map<int,double> > pheromones, List<double> length, Map<int,int> []tabu){
+	protected void updatePheromones(Map<Integer, Map<Integer,Double> > pheromones, List<Double> length, List<Map<Integer,Integer>> tabu){
 		double updateValue = Q/length;
-		Map<int, Map<int,double> > updatep;
+		Map<Integer, Map<Integer,Double> > updatep;
 		for(int k=0;k<tabu.size();k++)
-			for(int i=0;i<tabu[k].size();i++){
-				Map<int,double> v;
-				v.put(tabu[k].get(i), updateValue);
+			for(int i=0;i<tabu.get(k).size();i++){
+				Map<Integer,Double> v;
+				v.put(tabu.get(k).get(i), updateValue);
 				updatep.put(i,v);
 			}
 		for(int i=0;i<tasks;i++){
-			Map<int,double> x = pheromones.get(i);
+			Map<Integer,Double> x = pheromones.get(i);
 			for (int j=0; j<vms ; j++) {
 				x.put(j,(1-rho)*x.get(j)+updatep.get(i).get(j));
 			}
@@ -125,10 +128,10 @@ public class ACOImplement{
 		}
 	}
 
-	protected globalUpdatePheromones(Map<int, Map<int,double> > pheromones, double length, Map<int,int> tabu){
+	protected void globalUpdatePheromones(Map<Integer, Map<Integer,Double> > pheromones, double length, Map<Integer,Integer> tabu){
 		double updateValue = Q/length;
 		for(int i=0;i<tabu.size();i++){
-			Map<int,double> v = pheromones.get(i);
+			Map<Integer,Double> v = pheromones.get(i);
 			v.put(tabu.get(i),v.get(tabu.get(i))+updateValue);
 			pheromones.put(i,v);
 		}
