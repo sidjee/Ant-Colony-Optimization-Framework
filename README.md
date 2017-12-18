@@ -12,5 +12,10 @@ The simulator to be used is Cloudsim by Melbourne Clouds Lab.
 
 ## How to use:
 1. Clone the Repository
-2. Adjust the Class Path
-3. import and use
+2. Add classes/ACOImplement.jar in cloudsim/jars directory <cloudsim is the dir where Cloudsim is installed>
+3. Adjust the DatacenterBroker.java file in cloudsim sources.
+```
+  ACOImplement aco1 = new ACOImplement(<no of ants>,<initialPheromonevalue>,<Q>,<alpha>,<beta>,<rho>);
+  Map<Integer,Integer> allocatedTasks = aco1.allocateTasks(<CloudletList>,<VMList>,<Max Iterations to be performed>);
+```
+4. The hashmap `allocatedTasks` will represent the cloudlets mapped to VMs.
