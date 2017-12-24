@@ -3,6 +3,7 @@ import java.text.DecimalFormat;
 import java.util.*;
 import java.util.stream.*;
 import java.lang.*;
+import java.io.*;
 // import java.util.Calendar;
 // import java.util.LinkedList;
 // import java.util.List;
@@ -35,6 +36,7 @@ public class LBACO{
 	protected double gamma;
 	protected double rho;
 	protected int m;
+	protected Random r;
 
 	// public Map<Integer,Integer> allocateTasks(List<Cloudlet> taskList,List<Vm> vmList,int tmax){
 	// 	int n = vmList.size();
@@ -58,11 +60,13 @@ public class LBACO{
 	// 	return at;
 	// }
 
-	public Map<Integer,Integer> implement(List<Cloudlet> taskList,List<Vm> vmList,int tmax){
+	public Map<Integer,Integer> implement(List<Cloudlet> taskList,List<Vm> vmList,int tmax) throws FileNotFoundException{
+		PrintWriter out = null;
+		out = new PrintWriter("output.txt");
 		int tasks = taskList.size();
 		int vms = vmList.size();
 		// List<Double> lengths = new ArrayList<>();
-		List<Integer> allocatedtasks = new ArrayList<>();
+		Map<Integer,Integer> allocatedtasks = new HashMap<>();
 		Map<Integer, Map<Integer,Double> > execTimes;
 		Map<Integer,Double> cc, pheromones;
 		
@@ -121,7 +125,7 @@ public class LBACO{
 					total += p;
 				}
 				for(int i=0; i<vms; i++){
-					p.put(i,probab.get(i)/total);
+					probab.put(i,probab.get(i)/total);
 				}
 
 				int []votes = new int[vms];
@@ -130,7 +134,7 @@ public class LBACO{
 				// tabu.get(k).put(-1,newVmList.get(k));
 					double max = 0;
 
-					int vmIndexChosen = vote(probab);
+					int vmIndexChosen = vote(vms,probab,out);
 					// tabu.get(k).put(task,vmIndexChosen);
 					votes[vmIndexChosen]++;
 					// double time = execTimes.get(task).get(vmIndexChosen);
@@ -143,10 +147,12 @@ public class LBACO{
 				for(int i=0;i<vms;i++){
 					if(max_votes<votes[i]){
 						max_votes = votes[i];
-						allocatedtasks.add(task,i);
+						allocatedtasks.put(task,i);
 						opt_vm = i;
 					}
 				}
+				out.println("Iteration"+String.valueOf(t)+" task "+String.valueOf(task)+" "+String.valueOf(opt_vm));
+
 				eet.put(opt_vm,eet.get(opt_vm)+execTimes.get(task).get(opt_vm));
 				pheromones.put(opt_vm,pheromones.get(opt_vm)*(1-rho)+Q/execTimes.get(task).get(opt_vm));
 			}
@@ -165,21 +171,30 @@ public class LBACO{
 		return allocatedtasks;
 	}
 
-	protected int vote(int vms, Map<Integer,Double> probab){
+	protected int vote(int vms, Map<Integer,Double> probab, PrintWriter out){
 		int []freq = new int[vms];
 		int sum = 0;
 		
 		for(int i=0;i<vms;i++){
-			freq[i] = probab*100000;
-			sum += probab[i];
+			freq[i] = (int)(probab.get(i)*100000.0);
+			sum += freq[i];
 		}
 
-		Random r = new Random();
-		int n = 1 + r.nextInt(total);
-		for(int i=0;i<vms-1;i++){
-			if(n>=freq[i] && n<= freq[i+1])
-				return i;
+		int n = 1 + r.nextInt(sum);
+		// out.println(String.valueOf(sum)+ " "+String.valueOf(n));
+		if(n <= freq[0]){
+			out.println(String.valueOf(sum)+ " "+String.valueOf(n)+" "+String.valueOf(0));
+			return 0;
 		}
+		
+		for(int i=0;i<vms-1;i++){
+			freq[i+1] += freq[i];
+			if(n>freq[i] && n<= freq[i+1]){
+				out.println(String.valueOf(sum)+ " "+String.valueOf(n)+" "+String.valueOf(i+1));
+				return i+1;
+			}
+		}
+		out.println("end!!");
 		return 0;
 	}
 
@@ -191,6 +206,7 @@ public class LBACO{
 		this.beta = beta;
 		this.gamma = gamma;
 		this.rho = rho;
+		r = new Random();
 	}
 
 	// protected int 
@@ -226,8 +242,8 @@ public class LBACO{
 	protected Map<Integer,Double> initializePheromone(Map<Integer,Double> cc){
 		Map<Integer, Double> pheromones = new HashMap<>();
 		
-		for (int j=0; j<vms ; j++) {
-			pheromones.put(i,cc.get(j));
+		for (int j=0; j<cc.size() ; j++) {
+			pheromones.put(j,cc.get(j));
 		}
 		
 		return pheromones;
