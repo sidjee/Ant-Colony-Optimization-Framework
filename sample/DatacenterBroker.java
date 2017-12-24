@@ -22,7 +22,7 @@ import org.cloudbus.cloudsim.core.SimEntity;
 import org.cloudbus.cloudsim.core.SimEvent;
 import org.cloudbus.cloudsim.lists.CloudletList;
 import org.cloudbus.cloudsim.lists.VmList;
-import org.cloudbus.cloudsim.ACOImplement;
+import org.cloudbus.cloudsim.LBACO;
 
 /**
  * DatacentreBroker represents a broker acting on behalf of a user. It hides VM management, as vm
@@ -73,6 +73,13 @@ public class DatacenterBroker extends SimEntity {
 	/** The datacenter characteristics list. */
 	protected Map<Integer, DatacenterCharacteristics> datacenterCharacteristicsList;
 
+	protected double Q;
+	protected double alpha;
+	protected double beta;
+	protected double gamma;
+	protected double rho;
+	protected int m;
+
 	/**
 	 * Created a new DatacenterBroker object.
 	 * 
@@ -82,7 +89,7 @@ public class DatacenterBroker extends SimEntity {
 	 * @pre name != null
 	 * @post $none
 	 */
-	public DatacenterBroker(String name) throws Exception {
+	public DatacenterBroker(String name, int m, double Q, double alpha, double beta, double gamma, double rho) throws Exception {
 		super(name);
 
 		setVmList(new ArrayList<Vm>());
@@ -100,6 +107,13 @@ public class DatacenterBroker extends SimEntity {
 		setDatacenterRequestedIdsList(new ArrayList<Integer>());
 		setVmsToDatacentersMap(new HashMap<Integer, Integer>());
 		setDatacenterCharacteristicsList(new HashMap<Integer, DatacenterCharacteristics>());
+
+		this.m = m;
+		this.Q = Q;
+		this.alpha = alpha;
+		this.beta = beta;
+		this.gamma = gamma;
+		this.rho = rho;
 	}
 
 	/**
@@ -377,11 +391,11 @@ public class DatacenterBroker extends SimEntity {
 		// int vmIndex = 0;
 		List<Cloudlet> clList = getCloudletList();
 		List<Vm> vm_list = getVmsCreatedList();
-		Random r = new Random();
-		int m = (vm_list.size()/4 + r.nextInt(vm_list.size()/2+1))%vm_list.size();
+		// Random r = new Random();
+		// int m = (vm_list.size()/4 + r.nextInt(vm_list.size()/2+1))%vm_list.size();
 
-		ACOImplement aco1 = new ACOImplement(m,0.5,100,1,1,0.5);
-		Map<Integer,Integer> allocated = aco1.allocateTasks(clList,vm_list,50);
+		LBACO lbaco1 = new LBACO(m,Q,alpha,beta,gamma,rho);
+		Map<Integer,Integer> allocated = lbaco1.implement(clList,vm_list,100);
 
 		for (int i=0;i<clList.size();i++) {
 			Cloudlet cloudlet = clList.get(i);
